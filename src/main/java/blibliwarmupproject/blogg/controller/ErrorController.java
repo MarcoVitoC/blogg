@@ -1,7 +1,7 @@
 package blibliwarmupproject.blogg.controller;
 
-import blibliwarmupproject.blogg.Exception.InvalidRequestException;
-import blibliwarmupproject.blogg.Exception.NotFoundException;
+import blibliwarmupproject.blogg.exception.InvalidRequestException;
+import blibliwarmupproject.blogg.exception.NotFoundException;
 import blibliwarmupproject.blogg.model.response.BaseErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;

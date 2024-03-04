@@ -1,4 +1,4 @@
-package blibliwarmupproject.blogg.Exception;
+package blibliwarmupproject.blogg.exception;
 
 public class InvalidRequestException extends RuntimeException {
     public InvalidRequestException(String message) {

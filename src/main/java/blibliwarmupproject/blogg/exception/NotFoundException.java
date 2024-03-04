@@ -1,6 +1,4 @@
-package blibliwarmupproject.blogg.Exception;
-
-import org.springframework.data.relational.core.sql.Not;
+package blibliwarmupproject.blogg.exception;
 
 public class NotFoundException extends Exception {
     public NotFoundException(String message) {
