@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,19 +38,14 @@ public class PostServiceImpl implements PostService {
                 .body(request.getBody())
                 .isNewPost(true)
                 .build())
-            .flatMap(newPost -> reactiveRedisTemplate.opsForValue().set(newPost.getId(), newPost))
             .thenReturn("Post created successfully!");
     }
 
     @Override
     public Mono<List<Post>> get() {
-//        return reactiveRedisTemplate.keys("*")
-//            .collectList()
-//            .flatMap(cache -> cache.isEmpty() ? fetchAllPost() : tryFetchNewPost(cache));
-
         return reactiveRedisTemplate.keys("*")
-            .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
-            .collectList();
+            .collectList()
+            .flatMap(cache -> cache.isEmpty() ? fetchAllPost() : tryFetchNewPost(cache));
     }
 
     @Override
@@ -64,9 +60,11 @@ public class PostServiceImpl implements PostService {
                 post.setTitle(request.getTitle());
                 post.setBody(request.getBody());
 
-               return postRepository.save(post)
-                   .flatMap(updatedPost -> reactiveRedisTemplate.opsForValue().set(updatedPost.getId(), updatedPost))
-                   .thenReturn("Post updated successfully!");
+                return postRepository.save(post)
+                    .flatMap(updatedPost -> reactiveRedisTemplate.getExpire(updatedPost.getId())
+                        .flatMap(oldExpireTime -> reactiveRedisTemplate.opsForValue().set(updatedPost.getId(), updatedPost)
+                            .then(reactiveRedisTemplate.expire(updatedPost.getId(), oldExpireTime))
+                            .thenReturn("Post updated successfully!")));
             })
             .switchIfEmpty(Mono.error(new NotFoundException("Post not found")));
     }
@@ -79,36 +77,38 @@ public class PostServiceImpl implements PostService {
             .switchIfEmpty(Mono.error(new NotFoundException("Post not found")));
     }
 
-//    private Mono<List<Post>> fetchAllPost() {
-//        return postRepository.findAll()
-//            .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post))
-//            .thenMany(reactiveRedisTemplate.keys("*")
-//                    .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)))
-//            .collectList();
-//    }
-//
-//    private Mono<List<Post>> tryFetchNewPost(List<String> cache) {
-//        return postRepository.findAll()
-//            .collectList()
-//            .flatMap(db -> cache.size() == db.size() ? getCache() : fetchNewPost(cache, db));
-//    }
-//
-//    private Mono<List<Post>> getCache() {
-//        return reactiveRedisTemplate.keys("*")
-//            .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
-//            .collectList();
-//    }
-//
-//    private Mono<List<Post>> fetchNewPost(List<String> cache, List<Post> db) {
-//        List<String> cacheKeys = cache.stream().map(Object::toString).toList();
-//        List<Post> newPosts = db.stream()
-//            .filter(newPost -> !cacheKeys.contains(newPost.getId()))
-//            .collect(Collectors.toList());
-//
-//        return Flux.fromIterable(newPosts)
-//            .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post))
-//            .thenMany(reactiveRedisTemplate.keys("*")
-//                    .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)))
-//            .collectList();
-//    }
+    private Mono<List<Post>> fetchAllPost() {
+        return postRepository.findAll()
+            .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post)
+                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(5))))
+            .thenMany(reactiveRedisTemplate.keys("*")
+                .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)))
+            .collectList();
+    }
+
+    private Mono<List<Post>> tryFetchNewPost(List<String> cache) {
+        return postRepository.findAll()
+            .collectList()
+            .flatMap(db -> cache.size() == db.size() ? getCache() : fetchNewPost(cache, db));
+    }
+
+    private Mono<List<Post>> getCache() {
+        return reactiveRedisTemplate.keys("*")
+            .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
+            .collectList();
+    }
+
+    private Mono<List<Post>> fetchNewPost(List<String> cache, List<Post> db) {
+        List<String> cacheKeys = cache.stream().map(Object::toString).toList();
+        List<Post> newPosts = db.stream()
+            .filter(newPost -> !cacheKeys.contains(newPost.getId()))
+            .collect(Collectors.toList());
+
+        return Flux.fromIterable(newPosts)
+            .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post)
+                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(5))))
+            .thenMany(reactiveRedisTemplate.keys("*")
+                .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)))
+            .collectList();
+    }
 }
