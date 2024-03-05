@@ -1,45 +1,25 @@
 package blibliwarmupproject.blogg.config;
 
 import blibliwarmupproject.blogg.entity.Post;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.ReactiveRedisOperations;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.serializer.*;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 @Configuration
 public class RedisConfiguration {
 
-    @Value("${spring.data.redis.host}")
-    private String host;
-
-    @Value("${spring.data.redis.port}")
-    private int port;
-
     @Bean
-    public LettuceConnectionFactory lettuceConnectionFactory() {
-        RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
+    public ReactiveRedisTemplate<String, Post> reactiveRedisTemplate(ReactiveRedisConnectionFactory factory) {
+        Jackson2JsonRedisSerializer<Post> serializer = new Jackson2JsonRedisSerializer<>(Post.class);
 
-        redisStandaloneConfiguration.setHostName(host);
-        redisStandaloneConfiguration.setPort(port);
+        RedisSerializationContext.RedisSerializationContextBuilder<String, Post> builder = RedisSerializationContext
+                .newSerializationContext(new Jackson2JsonRedisSerializer<>(String.class));
+        RedisSerializationContext<String, Post> context = builder.value(serializer).build();
 
-        return new LettuceConnectionFactory(redisStandaloneConfiguration);
-    }
-
-    @Bean
-    public ReactiveRedisOperations<String, Post> redisOperations(LettuceConnectionFactory lettuceConnectionFactory) {
-        RedisSerializationContext<String, Post> serializationContext = RedisSerializationContext
-            .<String, Post>newSerializationContext(new StringRedisSerializer())
-            .key(new StringRedisSerializer())
-            .value(new GenericToStringSerializer<>(Post.class))
-            .hashKey(new StringRedisSerializer())
-            .hashValue(new GenericJackson2JsonRedisSerializer())
-            .build();
-
-        return new ReactiveRedisTemplate<>(lettuceConnectionFactory, serializationContext);
+        return new ReactiveRedisTemplate<>(factory, context);
     }
 
 }

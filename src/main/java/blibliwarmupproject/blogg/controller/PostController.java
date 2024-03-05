@@ -28,7 +28,7 @@ public class PostController {
     }
 
     @GetMapping
-    public Mono<BaseResponse<List<Post>>> getAllPost() {
+    public Mono<BaseResponse<List<Post>>> get() {
         return postService.get().flatMap(data -> BaseResponse.ok(Mono.just(data)));
     }
 
