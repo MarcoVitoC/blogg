@@ -33,9 +33,7 @@ public class PostController {
     }
 
     @PutMapping("/{id}")
-    public Mono<BaseResponse<String>> update(
-            @PathVariable("id") String id,
-            @RequestBody UpdatePostRequest request) {
+    public Mono<BaseResponse<String>> update(@PathVariable("id") String id, @RequestBody UpdatePostRequest request) {
         return postService.update(id, request).flatMap(data -> BaseResponse.ok(Mono.just(data)));
     }
 

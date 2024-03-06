@@ -17,7 +17,7 @@ public class ErrorController {
         return BaseErrorResponse.builder()
             .code(HttpStatus.BAD_REQUEST.value())
             .status(HttpStatus.BAD_REQUEST.name())
-            .errors(exception.getMessage())
+            .error(exception.getMessage())
             .build();
     }
 
@@ -27,7 +27,7 @@ public class ErrorController {
         return BaseErrorResponse.builder()
             .code(HttpStatus.NOT_FOUND.value())
             .status(HttpStatus.NOT_FOUND.name())
-            .errors(exception.getMessage())
+            .error(exception.getMessage())
             .build();
     }
 

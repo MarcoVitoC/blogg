@@ -12,5 +12,5 @@ import lombok.NoArgsConstructor;
 public class BaseErrorResponse {
     private int code;
     private String status;
-    private String errors;
+    private String error;
 }
