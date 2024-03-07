@@ -106,6 +106,30 @@ public class PostControllerTest {
     }
 
     @Test
+    public void testGetPostById() {
+        Post post = Post.builder().title("BloggTitle").body("BloggBody").isNewPost(true).build();
+        postRepository.save(post);
+
+        when(postService.getById(post.getId())).thenReturn(Mono.just(post));
+        webTestClient.get().uri("/api/posts/{id}", post.getId())
+                .exchange()
+                .expectStatus().isOk();
+        verify(postService, times(1)).getById(post.getId());
+    }
+
+    @Test
+    public void testGetPostByIdNotFound() {
+        Post post = Post.builder().title("BloggTitle").body("BloggBody").isNewPost(true).build();
+        postRepository.save(post);
+
+        when(postService.getById("abc")).thenReturn(Mono.error(new NotFoundException("Post not found")));
+        webTestClient.get().uri("/api/posts/{id}", "abc")
+                .exchange()
+                .expectStatus().isNotFound();
+        verify(postService, times(1)).getById("abc");
+    }
+
+    @Test
     public void testUpdatePost() {
         Post post = Post.builder().title("BloggTitle").body("BloggBody").isNewPost(true).build();
         postRepository.save(post);
