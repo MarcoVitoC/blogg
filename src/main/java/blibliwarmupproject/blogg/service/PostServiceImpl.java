@@ -49,6 +49,11 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public Mono<Post> getById(String id) {
+        return reactiveRedisTemplate.opsForValue().get(id).switchIfEmpty(fetchPostById(id));
+    }
+
+    @Override
     public Mono<String> update(String id, UpdatePostRequest request) {
         if (request.getTitle().isEmpty() || request.getBody().isEmpty()) {
             return Mono.error(new InvalidRequestException("All field is required"));
@@ -110,5 +115,13 @@ public class PostServiceImpl implements PostService {
             .thenMany(reactiveRedisTemplate.keys("*")
                 .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)))
             .collectList();
+    }
+
+    private Mono<Post> fetchPostById(String id) {
+        return postRepository.findById(id)
+            .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post)
+                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(5))))
+            .then(reactiveRedisTemplate.opsForValue().get(id))
+            .switchIfEmpty(Mono.error(new NotFoundException("Post not found")));
     }
 }

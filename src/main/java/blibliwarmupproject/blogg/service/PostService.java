@@ -13,6 +13,8 @@ public interface PostService {
 
     Mono<List<Post>> get();
 
+    Mono<Post> getById(String id);
+
     Mono<String> update(String id, UpdatePostRequest request);
 
     Mono<String> delete(String id);

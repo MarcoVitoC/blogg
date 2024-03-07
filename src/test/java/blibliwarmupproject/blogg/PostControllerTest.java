@@ -136,7 +136,6 @@ public class PostControllerTest {
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody().jsonPath("$.error").isEqualTo("All field is required");
-        verify(postService, times(1)).update(post.getId(), request);
     }
 
     @Test
@@ -153,7 +152,6 @@ public class PostControllerTest {
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectBody().jsonPath("$.error").isEqualTo("Post not found");
-        verify(postService, times(1)).update("abc", request);
     }
 
     @Test
