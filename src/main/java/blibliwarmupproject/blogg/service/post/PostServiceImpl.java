@@ -1,6 +1,5 @@
 package blibliwarmupproject.blogg.service.post;
 
-import blibliwarmupproject.blogg.entity.Category;
 import blibliwarmupproject.blogg.exception.InvalidRequestException;
 import blibliwarmupproject.blogg.exception.NotFoundException;
 import blibliwarmupproject.blogg.entity.Post;
@@ -40,12 +39,14 @@ public class PostServiceImpl implements PostService {
 
         return categoryRepository.findByName(request.getCategoryName())
             .switchIfEmpty(Mono.error(new NotFoundException("Category not found!")))
-            .flatMap(category -> postRepository.save(Post.builder()
+            .flatMap(category -> postRepository.findByTitle(request.getTitle())
+                .flatMap(post -> Mono.error(new InvalidRequestException("Title already exist!")))
+                .switchIfEmpty(postRepository.save(Post.builder()
                     .categoryId(category.getId())
                     .title(request.getTitle())
                     .body(request.getBody())
                     .isNewPost(true)
-                    .build())
+                    .build()))
                 .thenReturn("Post created successfully!")
             );
     }

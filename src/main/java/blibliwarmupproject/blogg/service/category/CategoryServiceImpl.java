@@ -33,9 +33,9 @@ public class CategoryServiceImpl implements CategoryService {
             return Mono.error(new InvalidRequestException("All field is required"));
         }
 
-        return categoryRepository.save(Category.builder()
-                .name(request.getName())
-                .build())
+        return categoryRepository.findByName(request.getName())
+            .flatMap(category -> Mono.error(new InvalidRequestException("Category already exist!")))
+            .switchIfEmpty(categoryRepository.save(Category.builder().name(request.getName()).build()))
             .thenReturn("Category created successfully!");
     }
 
