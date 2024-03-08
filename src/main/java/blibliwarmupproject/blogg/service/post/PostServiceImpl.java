@@ -1,10 +1,12 @@
 package blibliwarmupproject.blogg.service.post;
 
+import blibliwarmupproject.blogg.entity.Category;
 import blibliwarmupproject.blogg.exception.InvalidRequestException;
 import blibliwarmupproject.blogg.exception.NotFoundException;
 import blibliwarmupproject.blogg.entity.Post;
 import blibliwarmupproject.blogg.model.request.post.CreatePostRequest;
 import blibliwarmupproject.blogg.model.request.post.UpdatePostRequest;
+import blibliwarmupproject.blogg.repository.CategoryRepository;
 import blibliwarmupproject.blogg.repository.PostRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,20 +27,27 @@ public class PostServiceImpl implements PostService {
     private PostRepository postRepository;
 
     @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
     private ReactiveRedisTemplate<String, Post> reactiveRedisTemplate;
 
     @Override
     public Mono<String> create(CreatePostRequest request) {
-        if (request.getTitle().isEmpty() || request.getBody().isEmpty()) {
+        if (request.getTitle().isEmpty() || request.getBody().isEmpty() || request.getCategoryName().isEmpty()) {
             return Mono.error(new InvalidRequestException("All field is required"));
         }
 
-        return postRepository.save(Post.builder()
-                .title(request.getTitle())
-                .body(request.getBody())
-                .isNewPost(true)
-                .build())
-            .thenReturn("Post created successfully!");
+        return categoryRepository.findByName(request.getCategoryName())
+            .switchIfEmpty(Mono.error(new NotFoundException("Category not found!")))
+            .flatMap(category -> postRepository.save(Post.builder()
+                    .categoryId(category.getId())
+                    .title(request.getTitle())
+                    .body(request.getBody())
+                    .isNewPost(true)
+                    .build())
+                .thenReturn("Post created successfully!")
+            );
     }
 
     @Override
@@ -54,24 +63,36 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public Mono<List<Post>> getByCategoryId(Long id) {
+        return reactiveRedisTemplate.keys("*")
+            .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
+            .filter(post -> post.getCategoryId().equals(id))
+            .collectList();
+    }
+
+    @Override
     public Mono<String> update(String id, UpdatePostRequest request) {
-        if (request.getTitle().isEmpty() || request.getBody().isEmpty()) {
+        if (request.getTitle().isEmpty() || request.getBody().isEmpty() || request.getCategoryName().isEmpty()) {
             return Mono.error(new InvalidRequestException("All field is required"));
         }
 
-        return postRepository.findById(id)
-            .flatMap(post -> {
-                post.setNewPost(false);
-                post.setTitle(request.getTitle());
-                post.setBody(request.getBody());
+        return categoryRepository.findByName(request.getCategoryName())
+            .switchIfEmpty(Mono.error(new NotFoundException("Category not found!")))
+            .flatMap(category -> postRepository.findById(id)
+                .flatMap(post -> {
+                    post.setNewPost(false);
+                    post.setCategoryId(category.getId());
+                    post.setTitle(request.getTitle());
+                    post.setBody(request.getBody());
 
-                return postRepository.save(post)
-                    .flatMap(updatedPost -> reactiveRedisTemplate.getExpire(updatedPost.getId())
-                        .flatMap(oldExpireTime -> reactiveRedisTemplate.opsForValue().set(updatedPost.getId(), updatedPost)
-                            .then(reactiveRedisTemplate.expire(updatedPost.getId(), oldExpireTime))
-                            .thenReturn("Post updated successfully!")));
-            })
-            .switchIfEmpty(Mono.error(new NotFoundException("Post not found")));
+                    return postRepository.save(post)
+                        .flatMap(updatedPost -> reactiveRedisTemplate.getExpire(updatedPost.getId())
+                            .flatMap(oldExpireTime -> reactiveRedisTemplate.opsForValue().set(updatedPost.getId(), updatedPost)
+                                .then(reactiveRedisTemplate.expire(updatedPost.getId(), oldExpireTime))
+                                .thenReturn("Post updated successfully!")));
+                })
+                .switchIfEmpty(Mono.error(new NotFoundException("Post not found")))
+            );
     }
 
     @Override
@@ -85,7 +106,7 @@ public class PostServiceImpl implements PostService {
     private Mono<List<Post>> fetchAllPost() {
         return postRepository.findAll()
             .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post)
-                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(5))))
+                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(30))))
             .thenMany(reactiveRedisTemplate.keys("*")
                 .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)))
             .collectList();
@@ -111,7 +132,7 @@ public class PostServiceImpl implements PostService {
 
         return Flux.fromIterable(newPosts)
             .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post)
-                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(5))))
+                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(30))))
             .thenMany(reactiveRedisTemplate.keys("*")
                 .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)))
             .collectList();
@@ -120,7 +141,7 @@ public class PostServiceImpl implements PostService {
     private Mono<Post> fetchPostById(String id) {
         return postRepository.findById(id)
             .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post)
-                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(5))))
+                .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(30))))
             .then(reactiveRedisTemplate.opsForValue().get(id))
             .switchIfEmpty(Mono.error(new NotFoundException("Post not found")));
     }

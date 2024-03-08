@@ -37,7 +37,7 @@ public class CategoryController {
         return categoryService.update(id, request).flatMap(data -> BaseResponse.ok(Mono.just(data)));
     }
 
-    @DeleteMapping
+    @DeleteMapping("/{id}")
     public Mono<BaseResponse<String>> delete(@PathVariable("id") Long id) {
         return categoryService.delete(id).flatMap(data -> BaseResponse.ok(Mono.just(data)));
     }

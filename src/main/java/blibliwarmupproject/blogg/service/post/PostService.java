@@ -14,6 +14,8 @@ public interface PostService {
 
     Mono<Post> getById(String id);
 
+    Mono<List<Post>> getByCategoryId(Long id);
+
     Mono<String> update(String id, UpdatePostRequest request);
 
     Mono<String> delete(String id);

@@ -1,12 +1,15 @@
 package blibliwarmupproject.blogg.service.category;
 
 import blibliwarmupproject.blogg.entity.Category;
+import blibliwarmupproject.blogg.entity.Post;
 import blibliwarmupproject.blogg.exception.InvalidRequestException;
 import blibliwarmupproject.blogg.exception.NotFoundException;
 import blibliwarmupproject.blogg.model.request.category.CreateCategoryRequest;
 import blibliwarmupproject.blogg.model.request.category.UpdateCategoryRequest;
 import blibliwarmupproject.blogg.repository.CategoryRepository;
+import blibliwarmupproject.blogg.repository.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -17,6 +20,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private PostRepository postRepository;
+
+    @Autowired
+    private ReactiveRedisTemplate<String, Post> reactiveRedisTemplate;
 
     @Override
     public Mono<String> create(CreateCategoryRequest request) {
@@ -51,7 +60,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Mono<String> delete(Long id) {
-        return categoryRepository.deleteById(id).thenReturn("Category deleted successfully!")
-            .switchIfEmpty(Mono.error(new NotFoundException("Category not found")));
+        return reactiveRedisTemplate.keys("*")
+            .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
+            .filter(post -> post.getCategoryId().equals(id))
+            .flatMap(post -> postRepository.deleteById(post.getId())
+                    .then(reactiveRedisTemplate.delete(post.getId())))
+            .then(categoryRepository.deleteById(id))
+            .thenReturn("Category deleted successfully!");
     }
 }
