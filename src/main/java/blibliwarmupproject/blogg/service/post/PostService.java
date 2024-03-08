@@ -1,9 +1,8 @@
-package blibliwarmupproject.blogg.service;
+package blibliwarmupproject.blogg.service.post;
 
 import blibliwarmupproject.blogg.entity.Post;
-import blibliwarmupproject.blogg.model.request.CreatePostRequest;
-import blibliwarmupproject.blogg.model.request.UpdatePostRequest;
-import reactor.core.publisher.Flux;
+import blibliwarmupproject.blogg.model.request.post.CreatePostRequest;
+import blibliwarmupproject.blogg.model.request.post.UpdatePostRequest;
 import reactor.core.publisher.Mono;
 
 import java.util.List;

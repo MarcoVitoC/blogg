@@ -1,10 +1,10 @@
-package blibliwarmupproject.blogg.service;
+package blibliwarmupproject.blogg.service.post;
 
 import blibliwarmupproject.blogg.exception.InvalidRequestException;
 import blibliwarmupproject.blogg.exception.NotFoundException;
 import blibliwarmupproject.blogg.entity.Post;
-import blibliwarmupproject.blogg.model.request.CreatePostRequest;
-import blibliwarmupproject.blogg.model.request.UpdatePostRequest;
+import blibliwarmupproject.blogg.model.request.post.CreatePostRequest;
+import blibliwarmupproject.blogg.model.request.post.UpdatePostRequest;
 import blibliwarmupproject.blogg.repository.PostRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

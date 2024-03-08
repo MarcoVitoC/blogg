@@ -1,10 +1,10 @@
 package blibliwarmupproject.blogg.controller;
 
 import blibliwarmupproject.blogg.entity.Post;
-import blibliwarmupproject.blogg.model.request.CreatePostRequest;
-import blibliwarmupproject.blogg.model.request.UpdatePostRequest;
+import blibliwarmupproject.blogg.model.request.post.CreatePostRequest;
+import blibliwarmupproject.blogg.model.request.post.UpdatePostRequest;
 import blibliwarmupproject.blogg.model.response.BaseResponse;
-import blibliwarmupproject.blogg.service.PostService;
+import blibliwarmupproject.blogg.service.post.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;

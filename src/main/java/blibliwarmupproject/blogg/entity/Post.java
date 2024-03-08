@@ -24,6 +24,8 @@ public class Post implements Persistable<String> {
     @Builder.Default
     private String id = UUID.randomUUID().toString();
 
+    private Long categoryId;
+
     private String title;
 
     private String body;

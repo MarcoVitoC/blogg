@@ -1,4 +1,4 @@
-package blibliwarmupproject.blogg.model.request;
+package blibliwarmupproject.blogg.model.request.post;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

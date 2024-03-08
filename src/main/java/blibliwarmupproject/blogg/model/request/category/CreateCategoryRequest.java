@@ -1,4 +1,4 @@
-package blibliwarmupproject.blogg.model.request;
+package blibliwarmupproject.blogg.model.request.category;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UpdatePostRequest {
-    private String title;
-    private String body;
+public class CreateCategoryRequest {
+    private String name;
 }
