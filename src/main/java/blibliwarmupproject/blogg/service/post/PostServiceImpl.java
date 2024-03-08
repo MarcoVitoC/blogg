@@ -54,7 +54,7 @@ public class PostServiceImpl implements PostService {
     public Mono<List<Post>> get() {
         return reactiveRedisTemplate.keys("*")
             .collectList()
-            .flatMap(cache -> cache.isEmpty() ? fetchAllPost() : tryFetchNewPost(cache));
+            .flatMap(cache -> cache.isEmpty() ? fetchAllPost(null) : tryFetchNewPost(cache, null));
     }
 
     @Override
@@ -65,9 +65,8 @@ public class PostServiceImpl implements PostService {
     @Override
     public Mono<List<Post>> getByCategoryId(Long id) {
         return reactiveRedisTemplate.keys("*")
-            .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
-            .filter(post -> post.getCategoryId().equals(id))
-            .collectList();
+            .collectList()
+            .flatMap(cache -> cache.isEmpty() ? fetchAllPost(id) : tryFetchNewPost(cache, id));
     }
 
     @Override
@@ -103,8 +102,12 @@ public class PostServiceImpl implements PostService {
             .switchIfEmpty(Mono.error(new NotFoundException("Post not found")));
     }
 
-    private Mono<List<Post>> fetchAllPost() {
-        return postRepository.findAll()
+    private Mono<List<Post>> fetchAllPost(Long id) {
+        Flux<Post> posts = id == null ?
+            postRepository.findAll() :
+            postRepository.findAll().filter(post -> post.getCategoryId().equals(id));
+
+        return posts
             .flatMap(post -> reactiveRedisTemplate.opsForValue().set(post.getId(), post)
                 .then(reactiveRedisTemplate.expire(post.getId(), Duration.ofMinutes(30))))
             .thenMany(reactiveRedisTemplate.keys("*")
@@ -112,22 +115,29 @@ public class PostServiceImpl implements PostService {
             .collectList();
     }
 
-    private Mono<List<Post>> tryFetchNewPost(List<String> cache) {
+    private Mono<List<Post>> tryFetchNewPost(List<String> cache, Long id) {
         return postRepository.findAll()
             .collectList()
-            .flatMap(db -> cache.size() == db.size() ? getCache() : fetchNewPost(cache, db));
+            .flatMap(db -> cache.size() == db.size() ? getCache(id) : fetchNewPost(cache, db, id));
     }
 
-    private Mono<List<Post>> getCache() {
+    private Mono<List<Post>> getCache(Long id) {
+        if (id != null) {
+            return reactiveRedisTemplate.keys("*")
+                .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
+                .filter(post -> post.getCategoryId().equals(id))
+                .collectList();
+        }
+
         return reactiveRedisTemplate.keys("*")
             .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key))
             .collectList();
     }
 
-    private Mono<List<Post>> fetchNewPost(List<String> cache, List<Post> db) {
+    private Mono<List<Post>> fetchNewPost(List<String> cache, List<Post> db, Long id) {
         List<String> cacheKeys = cache.stream().map(Object::toString).toList();
         List<Post> newPosts = db.stream()
-            .filter(newPost -> !cacheKeys.contains(newPost.getId()))
+            .filter(newPost -> !cacheKeys.contains(newPost.getId()) && (id == null || newPost.getCategoryId().equals(id)))
             .collect(Collectors.toList());
 
         return Flux.fromIterable(newPosts)
