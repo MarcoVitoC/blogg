@@ -1,1 +1,2 @@
 # 📝 Blogg
+A trial RESTful API for the first internship task to gain a deeper understanding about Springboot framework, was developed using the <a href="https://spring.io/projects/spring-boot" target="_blank">Spring Boot</a> framework, <a href="https://www.baeldung.com/reactor-core" target="_blank">Reactive Programming</a>, <a href="https://www.postgresql.org/" target="_blank">PostgreSQL</a>, and <a href="https://redis.io/" target="_blank">Redis</a>.
